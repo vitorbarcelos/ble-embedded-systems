@@ -7,10 +7,6 @@
 #include <kernel.h>
 
 typedef struct {
-    // Enable
-    // -- 0 Disabled
-    // -- 1 Enabled
-    unsigned short int enable;
     struct bt_conn *connection;
     uint16_t handle;
 } Central;
@@ -25,8 +21,8 @@ static uint8_t gattDiscoverCallback(struct bt_conn *connection, const struct bt_
 
 static Central *central = NULL;
 static struct bt_gatt_discover_params discoverParams;
-static struct bt_uuid_16 uuidUpperCaseService = BT_UUID_INIT_16(0xAB01);
-static struct bt_uuid_16 uuidReceiveDataCharacteristic = BT_UUID_INIT_16(0xAB02);
+static struct bt_uuid_16 uuidUpperCaseService = BT_UUID_INIT_16(0xA123);
+static struct bt_uuid_16 uuidReceiveDataCharacteristic = BT_UUID_INIT_16(0xC123);
 
 static struct bt_gatt_subscribe_params subscriptionParams = {
     .end_handle = BT_ATT_LAST_ATTTRIBUTE_HANDLE,
@@ -120,12 +116,12 @@ static uint8_t gattDiscoverCallback(struct bt_conn *connection, const struct bt_
 
 static uint8_t notify(struct bt_conn *connection, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {    
-    if (length > 32) {
+    if (length > 16) {
         printk("A mensagem recebida excedeu o limite permitido.\n");
         return 1;
     }
 
-    char response[32];
+    char response[16];
     memcpy(response, data, length);
     response[length] = '\0';
     printk("Recebida: %s\n", (char *) response);
@@ -150,7 +146,6 @@ int startCentral(Central *_central)
 
     if (status == 0)
     {
-        central->enable = 1;
         printk("Bluetooth inicializado.\n");
         int status = bt_le_scan_start(BT_LE_SCAN_PASSIVE, afterDeviceFound);
 
@@ -164,7 +159,6 @@ int startCentral(Central *_central)
         }
     } else {
         printk("Não foi possível realizar o escaneamento.\n");
-        central->enable = 0;
     }
 
     return status;
@@ -223,7 +217,6 @@ int main()
 {
     Central central = {
         .connection = NULL,
-        .enable = 0
     };
 
     startCentral(&central);

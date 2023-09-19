@@ -5,10 +5,6 @@
 #include <ctype.h>
 
 typedef struct {
-    // Enable
-    // -- 0 Disabled
-    // -- 1 Enabled
-    unsigned short int enable;
     struct bt_conn *connection;
 } Peripheral;
 
@@ -17,9 +13,9 @@ static void disconnected(struct bt_conn *connection, uint8_t reason);
 ssize_t receiveData(struct bt_conn *connection, const struct bt_gatt_attr *attr, const void *buffer, uint16_t length, uint16_t offset, uint8_t flags);
 
 static Peripheral *peripheral = NULL;
-static struct bt_uuid_16 uuidUpperCaseService = BT_UUID_INIT_16(0xAB01);
-static struct bt_uuid_16 uuidSendDataCharacteristic = BT_UUID_INIT_16(0xAB03);
-static struct bt_uuid_16 uuidReceiveDataCharacteristic = BT_UUID_INIT_16(0xAB02);
+static struct bt_uuid_16 uuidUpperCaseService = BT_UUID_INIT_16(0xA123);
+static struct bt_uuid_16 uuidSendDataCharacteristic = BT_UUID_INIT_16(0xB123);
+static struct bt_uuid_16 uuidReceiveDataCharacteristic = BT_UUID_INIT_16(0xC123);
 
 static struct bt_gatt_attr uart_gatt_attrs[] = {
     BT_GATT_PRIMARY_SERVICE(&uuidUpperCaseService),
@@ -31,13 +27,12 @@ static struct bt_gatt_attr uart_gatt_attrs[] = {
                            NULL),
     BT_GATT_CHARACTERISTIC(&uuidSendDataCharacteristic.uuid,
                            BT_GATT_CHRC_READ,
-                           BT_GATT_PERM_WRITE,
+                           BT_GATT_PERM_READ,
                            NULL,
                            NULL,
                            NULL),
     BT_GATT_CCC(NULL, BT_GATT_PERM_WRITE)};
     static struct bt_gatt_service primaryService = BT_GATT_SERVICE(uart_gatt_attrs);
-
 
 static const struct bt_data AdvertisingData[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -78,16 +73,16 @@ static void disconnected(struct bt_conn *connection, uint8_t reason)
 
 ssize_t receiveData(struct bt_conn *connection, const struct bt_gatt_attr *attr, const void *buffer, uint16_t length, uint16_t offset, uint8_t flags)
 {
-    if (length > 32) {
+    if (length > 16) {
         printk("A mensagem excedeu o limite permitido.\n");
     }
 
     if (buffer) {
-        uint8_t response[32];
+        uint8_t response[16];
         memcpy(response, buffer, length);
         printk("Uma mensagem foi recebida.\n");
 
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < 16; i++)
         {
             if (isalpha(response[i]) != 0) {
                 response[i] = toupper(response[i]);
@@ -116,7 +111,6 @@ int startPeripheral(Peripheral *_peripheral)
 
     if (status == 0)
     {
-        peripheral->enable = 1;
         printk("Bluetooth inicializado.\n");
         int AdvertisingDataSize = ARRAY_SIZE(AdvertisingData);
         int status = bt_le_adv_start(BT_LE_ADV_CONN_NAME, AdvertisingData, AdvertisingDataSize, NULL, 0);
@@ -131,7 +125,6 @@ int startPeripheral(Peripheral *_peripheral)
         }
     } else {
         printk("Não foi possível inicializar o bluetooth.\n");
-        peripheral->enable = 0;
     }
 
     return status;
@@ -155,7 +148,6 @@ int main()
 {
     Peripheral peripheral = {
         .connection = NULL,
-        .enable = 0
     };
 
     startPeripheral(&peripheral);
